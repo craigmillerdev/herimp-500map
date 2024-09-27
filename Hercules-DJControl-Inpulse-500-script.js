@@ -463,6 +463,7 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     alpha: 1/8,
     beta: (1/8)/32,
     rpm: 33 + 1/3,
+    group: "[Channel"+midiChannel+"]",
     inputWheel: function(_channel, _control, value, _status, group) {
       var deck = parseInt(deckData.currentDeck.charAt(8));
       value = this.inValueScale(value);
@@ -493,6 +494,7 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     alpha: 1/8,
     beta: 1/8/32,
     rpm: 33 + 1/3,
+    group: "[Channel"+midiChannel+"]",
     inputWheel: function(_channel, _control, value, _status, group) {
       var deck = parseInt(deckData.currentDeck.charAt(8));
       value = this.inValueScale(value) * 4;
