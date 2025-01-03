@@ -459,17 +459,18 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
   this.jogWheel = new components.JogWheelBasic({
     midi: [0xB0 + midiChannel, 0x0A],
     deck: midiChannel, // whatever deck this jogwheel controls, in this case we ignore it
-    wheelResolution: 248, // how many ticks per revolution the jogwheel has
-    alpha: 1/8,
-    beta: (1/8)/32,
+    wheelResolution: 720, // how many ticks per revolution the jogwheel has
+    alpha: 5/6,
+    beta: (5/6)/128,
     rpm: 33 + 1/3,
+    group: "[Channel"+midiChannel+"]",
     inputWheel: function(_channel, _control, value, _status, group) {
       var deck = parseInt(deckData.currentDeck.charAt(8));
       value = this.inValueScale(value);
       if (engine.isScratching(deck)) {
         engine.scratchTick(deck, value);
       } else {
-        this.inSetValue(value);
+        engine.setValue(group, 'jog', value);
       }
     },
     inputTouch: function(channel, control, value, status, group) {
@@ -489,17 +490,18 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
   this.jogWheelShift = new components.JogWheelBasic({
     midi: [0xB3 + midiChannel, 0x0A],
     deck: midiChannel, // whatever deck this jogwheel controls, in this case we ignore it
-    wheelResolution: 248, // how many ticks per revolution the jogwheel has
-    alpha: 1/8,
-    beta: 1/8/32,
+    wheelResolution: 720, // how many ticks per revolution the jogwheel has
+    alpha: 5/6,
+    beta: (5/6)/128,
     rpm: 33 + 1/3,
+    group: "[Channel"+midiChannel+"]",
     inputWheel: function(_channel, _control, value, _status, group) {
       var deck = parseInt(deckData.currentDeck.charAt(8));
       value = this.inValueScale(value) * 4;
       if (engine.isScratching(deck)) {
         engine.scratchTick(deck, value);
       } else {
-        this.inSetValue(value);
+        engine.setValue(group, 'jog', value);
       }
     },
     inputTouch: function(channel, control, value, status, group) {
