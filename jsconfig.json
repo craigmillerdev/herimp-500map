@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "checkJs": true,
+    "lib": ["ES2016"]
+  },
+  "include": [
+    "./Hercules-DJControl-Inpulse-500-script.js",
+    "/Applications/Mixxx.app/Contents/Resources/controllers/common-controller-scripts.js",
+    "/Applications/Mixxx.app/Contents/Resources/controllers/engine-api.d.ts",
+    "/Applications/Mixxx.app/Contents/Resources/controllers/color-mapper-api.d.ts",
+    "/Applications/Mixxx.app/Contents/Resources/controllers/console-api.d.ts",
+    "/Applications/Mixxx.app/Contents/Resources/controllers/midi-controller-api.d.ts"
+  ]
+}
