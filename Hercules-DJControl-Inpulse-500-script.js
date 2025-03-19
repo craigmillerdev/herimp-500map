@@ -735,7 +735,6 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
           return;
         }
         if (value === BUTTON_CODES.Off && (DJCi500.loopInAdjust[deck - 1] || DJCi500.loopOutAdjust[deck - 1])) {
-          console.log("Loop In/Out adjust cancelled");
           DJCi500.loopInAdjust[deck - 1] = false;
           DJCi500.loopOutAdjust[deck - 1] = false;
           return;
@@ -808,6 +807,9 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
             engine.setValue(group, `beatloop_${bootloop_size}_toggle`, 1);
           } else {
             engine.setValue(group, `loop_remove`, 1); //Trying to toggle off the auto loop does't work if it's been adjusted!
+            const deck = script.deckFromGroup(deckData.currentDeck);
+            DJCi500.loopInAdjust[deck - 1] = false;
+            DJCi500.loopOutAdjust[deck - 1] = false;
           }
         }
       };
@@ -817,6 +819,9 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
       this.input = function (channel, control, value, status, group) {
         if (value === BUTTON_CODES.On) {
           engine.setValue(group, `loop_remove`, 1);
+          const deck = script.deckFromGroup(deckData.currentDeck);
+          DJCi500.loopInAdjust[deck - 1] = false;
+          DJCi500.loopOutAdjust[deck - 1] = false;
         }
       };
     },
