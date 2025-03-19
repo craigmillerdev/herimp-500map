@@ -404,6 +404,10 @@ DJCi500.fxEnabledIndicator = function (_value, group, _control, _status) {
   }
 };
 
+//@TODO Redefine component just to clear the type checking issues with it not being defined
+// @ts-ignore
+const components = components;
+
 DJCi500.Deck = function (deckNumbers, midiChannel) {
   components.Deck.call(this, deckNumbers);
   // Allow components to access deck variables
@@ -1108,21 +1112,19 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
   });
 
   this.filterKnob = new components.Pot({
-    midi: [0xb0 + midiChannel, 0x01],
+    midi: [getMidiChannelOffset(MIDI_BASE_CODES.Knobs, midiChannel), 0x01],
     number: midiChannel,
     group: `[QuickEffectRack1_[Channel${midiChannel}]]`,
     input: function (channel, control, value, status, group) {
-      if (DJCi500.updateEffectStatus(midiChannel, deckData.currentDeck)) {
-        // Calculate super1 value for effects knob
-        const normalizedValue = script.absoluteNonLin(value, 0.0, 0.5, 1.0, 0, 127);
+      const normalizedValue = script.absoluteNonLin(value, 0.0, 0.5, 1.0, 0, 127);
+      if (DJCi500.effectRackEnabled(midiChannel, deckData.currentDeck)) {
+        // Calculate meta value for effects knob
         const effectValue = Math.abs(normalizedValue - 0.5) * 2;
-
-        // Move the effects knob
-        engine.setValue(`[EffectRack1_EffectUnit${this.number}]`, "super1", effectValue);
+        // Move the effects knobs
+        DJCi500.effectRackUpdate(midiChannel, deckData.currentDeck, effectValue);
       } else {
         // Move the filter knob
-        const filterValue = script.absoluteNonLin(value, 0.0, 0.5, 1.0, 0, 127);
-        engine.setValue(`[QuickEffectRack1_${deckData.currentDeck}]`, "super1", filterValue);
+        engine.setValue(`[QuickEffectRack1_${deckData.currentDeck}]`, "super1", normalizedValue);
       }
     },
   });
@@ -1478,21 +1480,21 @@ DJCi500.tempoLEDs = function () {
   }
 
   if (diff < -0.25) {
-    this.setTempo(1, "down");
-    this.setTempo(2, "up");
+    DJCi500.setTempo(1, "down");
+    DJCi500.setTempo(2, "up");
     //clear beatalign leds
-    this.clearBeatAlign(1);
-    this.clearBeatAlign(2);
+    DJCi500.clearBeatAlign(1);
+    DJCi500.clearBeatAlign(2);
   } else if (diff > 0.25) {
-    this.setTempo(1, "up");
-    this.setTempo(2, "down");
+    DJCi500.setTempo(1, "up");
+    DJCi500.setTempo(2, "down");
 
     //clear beatalign leds
-    this.clearBeatAlign(1);
-    this.clearBeatAlign(2);
+    DJCi500.clearBeatAlign(1);
+    DJCi500.clearBeatAlign(2);
   } else {
-    this.setTempo(1, "align");
-    this.setTempo(2, "align");
+    DJCi500.setTempo(1, "align");
+    DJCi500.setTempo(2, "align");
 
     //Do beat alignement only if the tracks are already on Tempo
     // and only if they are playing
@@ -1518,20 +1520,20 @@ DJCi500.tempoLEDs = function () {
         diff = 1 + diff;
       }
       if (diff < 0.02 || diff > 1 - 0.02) {
-        this.setBeatAlign(1, "align");
-        this.setBeatAlign(2, "align");
+        DJCi500.setBeatAlign(1, "align");
+        DJCi500.setBeatAlign(2, "align");
       } else if (diff < 0.5) {
-        this.setBeatAlign(1, "rev");
-        this.setBeatAlign(2, "fwd");
+        DJCi500.setBeatAlign(1, "rev");
+        DJCi500.setBeatAlign(2, "fwd");
       } else {
-        this.setBeatAlign(1, "fwd");
-        this.setBeatAlign(2, "rev");
+        DJCi500.setBeatAlign(1, "fwd");
+        DJCi500.setBeatAlign(2, "rev");
       }
     } //if playing
     else {
       // Cear beat align leds
-      this.clearBeatAlign(1);
-      this.clearBeatAlign(2);
+      DJCi500.clearBeatAlign(1);
+      DJCi500.clearBeatAlign(2);
     }
   } //else tempo
 };
@@ -1619,13 +1621,22 @@ DJCi500.deckSelector = function (channel, control, value, status, group) {
   }
 };
 
-DJCi500.updateEffectStatus = function (midiChannel, _channel) {
-  let status = false;
+DJCi500.effectRackEnabled = function (midiChannel, _channel) {
+  let status = 0;
   for (let i = 1; i <= 3; i++) {
     status = status || engine.getValue(`[EffectRack1_EffectUnit${midiChannel}_Effect${i}]`, "enabled");
   }
+  console.log("Effect status: " + status);
   return status;
   // return engine.getValue("[EffectRack1_EffectUnit" + midiChannel + "]", "group_[Channel" + channel + "]_enable");
+};
+
+DJCi500.effectRackUpdate = function (midiChannel, _channel, value) {
+  for (let i = 1; i <= 3; i++) {
+    if (engine.getValue(`[EffectRack1_EffectUnit${midiChannel}_Effect${i}]`, "enabled")) {
+      engine.setValue(`[EffectRack1_EffectUnit${midiChannel}_Effect${i}]`, "meta", value);
+    }
+  }
 };
 
 ///////////////////////////////////////////////////////////////
