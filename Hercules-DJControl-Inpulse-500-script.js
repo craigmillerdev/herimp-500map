@@ -195,6 +195,7 @@ const MIDI_BASE_CODES = {
   Knobs: 0xb1,
   Buttons: 0x91,
   Lights: 0x90,
+  LightsShift: 0x94,
   BeatIndicators: 0x91,
   vuMeterMaster: 0xb0,
   vuMeterGlobal: 0xb1,
@@ -224,6 +225,13 @@ const LIGHT_CODES = {
   BeatAlignRev: 0x1d,
   GlobalVuMeter: 0x40,
   PeakVuMeter: 0x39,
+  FX1: 0x14,
+  FX2: 0x15,
+  FX3: 0x16,
+  FX4: 0x17,
+  Browser: 0x05, // Documented as 0x04, but this seems to be correct. TBC
+  LoopIn: 0x09,
+  LoopOut: 0x0a,
 };
 
 // For key shift pads and beat jump pads
@@ -282,6 +290,13 @@ DJCi500.activeSlicerMode = [
 ];
 DJCi500.slicerLoopBeat8 = [0, 0, 0, 0];
 ///////////////////////
+
+///////////////////
+// Loop In/Out Storage
+///////////////////
+DJCi500.loopInAdjust = [false, false];
+DJCi500.loopOutAdjust = [false, false];
+DJCi500.loopAdjustMultiply = 50;
 
 // Master VU Meter callbacks
 DJCi500.vuMeterUpdateMaster = function (value, _group, control) {
@@ -636,16 +651,37 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     rpm: 33 + 1 / 3,
     group: `[Channel${midiChannel}]`,
     inputWheel: function (_channel, _control, value, _status, group) {
-      const deck = script.deckFromGroup(deckData.currentDeck);
-      value = this.inValueScale(value);
-      if (engine.isScratching(deck)) {
-        engine.scratchTick(deck, value);
+      if (DJCi500.loopInAdjust[midiChannel - 1] || DJCi500.loopOutAdjust[midiChannel - 1]) {
+        // Loop In/Out adjust
+        value = this.inValueScale(value);
+        const loopEnabled = engine.getValue(group, "loop_enabled"); // too heavy?
+        if (loopEnabled > 0) {
+          if (DJCi500.loopInAdjust[midiChannel - 1]) {
+            value = value * DJCi500.loopAdjustMultiply + engine.getValue(group, "loop_start_position");
+            engine.setValue(group, "loop_start_position", value);
+            return;
+          }
+          if (DJCi500.loopOutAdjust[midiChannel - 1]) {
+            value = value * DJCi500.loopAdjustMultiply + engine.getValue(group, "loop_end_position");
+            engine.setValue(group, "loop_end_position", value);
+            return;
+          }
+        }
       } else {
-        engine.setValue(`[Channel${deck}]`, "jog", value);
+        const deck = script.deckFromGroup(deckData.currentDeck);
+        value = this.inValueScale(value);
+        if (engine.isScratching(deck)) {
+          engine.scratchTick(deck, value);
+        } else {
+          engine.setValue(`[Channel${deck}]`, "jog", value);
+        }
       }
     },
 
     inputTouch: function (channel, control, value, status, group) {
+      if (DJCi500.loopInAdjust[midiChannel - 1] || DJCi500.loopOutAdjust[midiChannel - 1]) {
+        return;
+      }
       const deck = script.deckFromGroup(deckData.currentDeck);
       if (value === BUTTON_CODES.On && deckData.vinylButtonState[deck - 1]) {
         engine.scratchEnable(deck, this.wheelResolution, this.rpm, this.alpha, this.beta);
@@ -693,10 +729,29 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     sendShifted: true,
     outKey: "loop_enabled", // TODO: Check with loop_in?
     unshift: function () {
-      this.inKey = "loop_in";
+      this.input = function (channel, control, value, status, group) {
+        const deck = script.deckFromGroup(deckData.currentDeck);
+        if (value === BUTTON_CODES.On && (DJCi500.loopInAdjust[deck - 1] || DJCi500.loopOutAdjust[deck - 1])) {
+          return;
+        }
+        if (value === BUTTON_CODES.Off && (DJCi500.loopInAdjust[deck - 1] || DJCi500.loopOutAdjust[deck - 1])) {
+          console.log("Loop In/Out adjust cancelled");
+          DJCi500.loopInAdjust[deck - 1] = false;
+          DJCi500.loopOutAdjust[deck - 1] = false;
+          return;
+        }
+        engine.setValue(group, "loop_in", value === BUTTON_CODES.On ? 1 : 0);
+      };
     },
     shift: function () {
-      this.inKey = "loop_in_goto";
+      this.input = function (channel, control, value, status, group) {
+        if (value === BUTTON_CODES.Off || engine.getValue(group, "loop_enabled") === 0) {
+          return;
+        }
+        const deck = script.deckFromGroup(deckData.currentDeck);
+        DJCi500.loopInAdjust[deck - 1] = !DJCi500.loopInAdjust[deck - 1];
+        DJCi500.loopOutAdjust[deck - 1] = false;
+      };
     },
   });
 
@@ -708,10 +763,30 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     sendShifted: true,
     outKey: "loop_enabled", // TODO: Check with loop_in?
     unshift: function () {
-      this.inKey = "loop_out";
+      this.input = function (channel, control, value, status, group) {
+        const deck = script.deckFromGroup(deckData.currentDeck);
+        if (value === BUTTON_CODES.On && (DJCi500.loopInAdjust[deck - 1] || DJCi500.loopOutAdjust[deck - 1])) {
+          return;
+        }
+        if (value === BUTTON_CODES.Off && (DJCi500.loopInAdjust[deck - 1] || DJCi500.loopOutAdjust[deck - 1])) {
+          DJCi500.loopInAdjust[deck - 1] = false;
+          DJCi500.loopOutAdjust[deck - 1] = false;
+          return;
+        }
+        engine.setValue(group, "loop_out", value === BUTTON_CODES.On ? 1 : 0);
+      };
     },
     shift: function () {
-      this.inKey = "loop_out_goto";
+      this.inKey = null;
+      this.storedInput = this.input;
+      this.input = function (channel, control, value, status, group) {
+        if (value === BUTTON_CODES.Off || engine.getValue(group, "loop_enabled") === 0) {
+          return;
+        }
+        const deck = script.deckFromGroup(deckData.currentDeck);
+        DJCi500.loopOutAdjust[deck - 1] = !DJCi500.loopOutAdjust[deck - 1];
+        DJCi500.loopInAdjust[deck - 1] = false;
+      };
     },
   });
 
@@ -728,16 +803,20 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     unshift: function () {
       this.input = function (channel, control, value, status, group) {
         if (value === BUTTON_CODES.On) {
-          const bootloop_size = engine.getValue(group, "beatloop_size");
-          engine.setValue(group, `beatloop_${bootloop_size}_toggle`, 1);
+          if (!engine.getValue(group, "loop_enabled")) {
+            const bootloop_size = engine.getValue(group, "beatloop_size");
+            engine.setValue(group, `beatloop_${bootloop_size}_toggle`, 1);
+          } else {
+            engine.setValue(group, `loop_remove`, 1); //Trying to toggle off the auto loop does't work if it's been adjusted!
+          }
         }
       };
     },
     shift: function () {
-      // @TODO: Not sure what this should do, reloop_toggle?
+      // Could this be used for re-looping?
       this.input = function (channel, control, value, status, group) {
         if (value === BUTTON_CODES.On) {
-          engine.setValue(group, `reloop_toggle`, 1);
+          engine.setValue(group, `loop_remove`, 1);
         }
       };
     },
@@ -754,12 +833,10 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
 
     input: function (_channel, _control, value, _status, _group) {
       // FIXME: Toggle for loop halve and double??
-
-      var deckGroup = deckData.currentDeck;
       if (value >= 0x40) {
-        engine.setValue(deckGroup, "loop_halve", true);
+        engine.setValue(deckData.currentDeck, "loop_halve", 1);
       } else {
-        engine.setValue(deckGroup, "loop_double", true);
+        engine.setValue(deckData.currentDeck, "loop_double", 1);
       }
     },
   });
@@ -1191,7 +1268,7 @@ DJCi500.init = function (id, debugging) {
   midi.sendShortMsg(0x92, 0x03, DJCi500.initialVinylMode ? 0x7f : 0x00);
 
   //Turn On Browser button LED
-  midi.sendShortMsg(0x90, 0x05, 0x10);
+  midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.Browser, 0x10);
 
   // Connect the VUMeters
   engine.makeConnection("[Channel1]", "vu_meter", DJCi500.vuMeterUpdateDeck);
@@ -1272,8 +1349,8 @@ DJCi500.init = function (id, debugging) {
   DJCi500.tempoTimer = engine.beginTimer(250, DJCi500.tempoLEDs);
 
   // FX buttons, light them to signal the current deck 1 and 2 as active
-  midi.sendShortMsg(0x90, 0x14, 0x7f);
-  midi.sendShortMsg(0x90, 0x15, 0x7f);
+  midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX1, 0x7f);
+  midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX2, 0x7f);
 
   // Create the deck objects
   DJCi500.deckA = new DJCi500.Deck([1, 3], 1);
@@ -1586,33 +1663,32 @@ DJCi500.updateDeckStatus = function (group) {
 
 // This is where we choose the channel using the FX buttons and light them
 // up correctly
-DJCi500.deckSelector = function (channel, control, value, status, group) {
+DJCi500.deckSelector = function (_channel, control, value, _status, _group) {
   if (value === BUTTON_CODES.On) {
-    const deckChosen = control - 0x13; // FX1 is 0x14, so this will yield the number
-    switch (deckChosen) {
-      case 1:
+    switch (control) {
+      case LIGHT_CODES.FX1:
         DJCi500.deckA.setCurrentDeck("[Channel1]");
         DJCi500.updateDeckStatus("[Channel1]");
-        midi.sendShortMsg(0x90, 0x14, 0x7f);
-        midi.sendShortMsg(0x90, 0x16, 0x00);
+        midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX1, ONOFF_CODES.On);
+        midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX3, ONOFF_CODES.Off);
         break;
-      case 2:
+      case LIGHT_CODES.FX2:
         DJCi500.deckB.setCurrentDeck("[Channel2]");
         DJCi500.updateDeckStatus("[Channel2]");
-        midi.sendShortMsg(0x90, 0x15, 0x7f);
-        midi.sendShortMsg(0x90, 0x17, 0x00);
+        midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX2, ONOFF_CODES.On);
+        midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX4, ONOFF_CODES.Off);
         break;
-      case 3:
+      case LIGHT_CODES.FX3:
         DJCi500.deckA.setCurrentDeck("[Channel3]");
         DJCi500.updateDeckStatus("[Channel3]");
-        midi.sendShortMsg(0x90, 0x14, 0x00);
-        midi.sendShortMsg(0x90, 0x16, 0x7f);
+        midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX1, ONOFF_CODES.Off);
+        midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX3, ONOFF_CODES.On);
         break;
-      case 4:
+      case LIGHT_CODES.FX4:
         DJCi500.deckB.setCurrentDeck("[Channel4]");
         DJCi500.updateDeckStatus("[Channel4]");
-        midi.sendShortMsg(0x90, 0x15, 0x00);
-        midi.sendShortMsg(0x90, 0x17, 0x7f);
+        midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX2, ONOFF_CODES.Off);
+        midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.FX4, ONOFF_CODES.On);
         break;
     }
   }
@@ -1623,9 +1699,7 @@ DJCi500.effectRackEnabled = function (midiChannel, _channel) {
   for (let i = 1; i <= 3; i++) {
     status = status || engine.getValue(`[EffectRack1_EffectUnit${midiChannel}_Effect${i}]`, "enabled");
   }
-  console.log("Effect status: " + status);
   return status;
-  // return engine.getValue("[EffectRack1_EffectUnit" + midiChannel + "]", "group_[Channel" + channel + "]_enable");
 };
 
 DJCi500.effectRackUpdate = function (midiChannel, _channel, value) {
@@ -1760,6 +1834,6 @@ DJCi500.slicerBeatActive = function (value, group, control) {
 
 DJCi500.shutdown = function () {
   //cleanup
-  midi.sendShortMsg(0x90, 0x05, 0x00); //turn browser led off
-  midi.sendShortMsg(0xb0, 0x7f, 0x7e);
+  midi.sendShortMsg(MIDI_BASE_CODES.Lights, LIGHT_CODES.Browser, 0x00); //turn browser led off
+  midi.sendShortMsg(0xb0, 0x7f, 0x7e); // Unsure... turn off all lights? TBC
 };
