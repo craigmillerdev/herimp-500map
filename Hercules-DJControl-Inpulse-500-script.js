@@ -404,10 +404,6 @@ DJCi500.fxEnabledIndicator = function (_value, group, _control, _status) {
   }
 };
 
-//@TODO Redefine component just to clear the type checking issues with it not being defined
-// @ts-ignore
-const components = components;
-
 DJCi500.Deck = function (deckNumbers, midiChannel) {
   components.Deck.call(this, deckNumbers);
   // Allow components to access deck variables
