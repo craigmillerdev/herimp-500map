@@ -196,8 +196,9 @@ const MIDI_BASE_CODES = {
   Buttons: 0x91,
   Lights: 0x90,
   BeatIndicators: 0x91,
-  vuMeter: 0x91,
+  vuMeterMaster: 0xb0,
   vuMeterGlobal: 0xb1,
+  vuMeterLights: 0x91,
 };
 
 const getMidiChannelOffset = function (basevalue, midiChannel) {
@@ -289,7 +290,7 @@ DJCi500.vuMeterUpdateMaster = function (value, _group, control) {
   value = script.absoluteLinInverse(value, 0.0, 1.0, 0, 124);
 
   const control_bit = control === "vu_meter_left" ? 0x40 : 0x41;
-  midi.sendShortMsg(0xb0, control_bit, value);
+  midi.sendShortMsg(MIDI_BASE_CODES.vuMeterMaster, control_bit, value);
 };
 
 DJCi500.vuMeterPeakLeftMaster = function (value, _group, _control, _status) {
@@ -316,16 +317,16 @@ DJCi500.vuMeterUpdateDeck = function (value, group, _control, _status) {
   if (DJCi500.deckA.currentDeck === group) {
     midi.sendShortMsg(getMidiChannelOffset(MIDI_BASE_CODES.vuMeterGlobal, 1), LIGHT_CODES.GlobalVuMeter, value_adj);
   } else if (DJCi500.deckB.currentDeck === group) {
-    midi.sendShortMsg(getMidiChannelOffset(MIDI_BASE_CODES.vuMeterGlobal, 1), LIGHT_CODES.GlobalVuMeter, value_adj);
+    midi.sendShortMsg(getMidiChannelOffset(MIDI_BASE_CODES.vuMeterGlobal, 2), LIGHT_CODES.GlobalVuMeter, value_adj);
   }
 };
 
 DJCi500.vuMeterPeakDeck = function (value, group, _control, _status) {
   let baseStatusCode = ONOFF_CODES.Off;
   if (DJCi500.deckA.currentDeck === group) {
-    baseStatusCode = getMidiChannelOffset(MIDI_BASE_CODES.vuMeter, 1);
+    baseStatusCode = getMidiChannelOffset(MIDI_BASE_CODES.vuMeterLights, 1);
   } else if (DJCi500.deckB.currentDeck === group) {
-    baseStatusCode = getMidiChannelOffset(MIDI_BASE_CODES.vuMeter, 2);
+    baseStatusCode = getMidiChannelOffset(MIDI_BASE_CODES.vuMeterLights, 2);
   }
   if (baseStatusCode)
     midi.sendShortMsg(baseStatusCode, LIGHT_CODES.PeakVuMeter, value ? ONOFF_CODES.On : ONOFF_CODES.Off);
