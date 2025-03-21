@@ -177,7 +177,7 @@
 
 			<!--Vinyl button-->
 			<control>
-				<group>[Master]</group>
+				<group>[Channel1]</group>
 				<key>DJCi500.deckA.vinylButton.input</key>
 				<description>Vinyl Deck A</description>
 				<status>0x91</status>
@@ -392,7 +392,7 @@
 
 			<!--Vinyl button-->
 			<control>
-				<group>[Master]</group>
+				<group>[Channel2]</group>
 				<key>DJCi500.deckB.vinylButton.input</key>
 				<description>Vinyl Deck B</description>
 				<status>0x92</status>
