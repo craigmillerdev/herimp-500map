@@ -268,7 +268,6 @@ const pairColorsOff = [
 //                          SLICER                           //
 ///////////////////////////////////////////////////////////////
 DJCi500.selectedSlicerDomain = [8, 8, 8, 8]; //length of the Slicer domain
-//PioneerDDJSX.slicerDomains = [8, 16, 32, 64];
 
 // slicer storage:
 DJCi500.slicerBeatsPassed = [0, 0, 0, 0];
@@ -294,9 +293,10 @@ DJCi500.slicerLoopBeat8 = [0, 0, 0, 0];
 ///////////////////
 // Loop In/Out Storage
 ///////////////////
-DJCi500.loopInAdjust = [false, false];
-DJCi500.loopOutAdjust = [false, false];
+DJCi500.loopInAdjust = [false, false, false, false];
+DJCi500.loopOutAdjust = [false, false, false, false];
 DJCi500.loopAdjustMultiply = 50;
+///////////////////
 
 // Master VU Meter callbacks
 DJCi500.vuMeterUpdateMaster = function (value, _group, control) {
@@ -408,13 +408,13 @@ DJCi500.fxEnabledIndicator = function (_value, group, _control, _status) {
   if (group == "[QuickEffectRack1_" + deckA + "]") {
     midi.sendShortMsg(
       getMidiChannelOffset(MIDI_BASE_CODES.Pads, 1),
-      0x66,
+      getPadCode(7, 7),
       active ? DJCi500ColorCodes.Green : DJCi500ColorCodes.Red
     );
   } else if (group == "[QuickEffectRack1_" + deckB + "]") {
     midi.sendShortMsg(
       getMidiChannelOffset(MIDI_BASE_CODES.Pads, 2),
-      0x66,
+      getPadCode(7, 7),
       active ? DJCi500ColorCodes.Green : DJCi500ColorCodes.Red
     );
   }
@@ -424,6 +424,8 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
   components.Deck.call(this, deckNumbers);
   // Allow components to access deck variables
   const deckData = this;
+
+  this.currentDeck = `[Channel${midiChannel}]`; // The current deck for this instance, set on init, and on the fly when switching decks
 
   // For loop and looprolls
   const fractions = ["0.125", "0.25", "0.5", "1", "2", "4", "8", "16"];
@@ -451,7 +453,7 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
   // Effect section components
   this.effectEnabled = false;
 
-  this.getMidiChannelOffset = (basvalue) => getMidiChannelOffset(basvalue, midiChannel);
+  this.getMidiChannelOffset = (basevalue) => getMidiChannelOffset(basevalue, midiChannel);
 
   // Make sure the shift button remaps the shift actions
   this.shiftButton = new components.Button({
@@ -577,7 +579,7 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     shift: function () {
       this.input = function (channel, control, value, status, group) {
         if (value === BUTTON_CODES.On) {
-          var deck = parseInt(deckData.currentDeck.charAt(8)) - 1;
+          const deck = script.deckFromGroup(deckData.currentDeck);
           deckData.slowPauseSetState[deck] = !deckData.slowPauseSetState[deck];
         }
       };
@@ -651,19 +653,20 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     rpm: 33 + 1 / 3,
     group: `[Channel${midiChannel}]`,
     inputWheel: function (_channel, _control, value, _status, group) {
-      if (DJCi500.loopInAdjust[midiChannel - 1] || DJCi500.loopOutAdjust[midiChannel - 1]) {
+      const deckIndex = script.deckFromGroup(this.group) - 1;
+      if (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex]) {
         // Loop In/Out adjust
         value = this.inValueScale(value);
-        const loopEnabled = engine.getValue(group, "loop_enabled"); // too heavy?
+        const loopEnabled = engine.getValue(this.group, "loop_enabled");
         if (loopEnabled > 0) {
-          if (DJCi500.loopInAdjust[midiChannel - 1]) {
-            value = value * DJCi500.loopAdjustMultiply + engine.getValue(group, "loop_start_position");
-            engine.setValue(group, "loop_start_position", value);
+          if (DJCi500.loopInAdjust[deckIndex]) {
+            value = value * DJCi500.loopAdjustMultiply + engine.getValue(this.group, "loop_start_position");
+            engine.setValue(this.group, "loop_start_position", value);
             return;
           }
-          if (DJCi500.loopOutAdjust[midiChannel - 1]) {
-            value = value * DJCi500.loopAdjustMultiply + engine.getValue(group, "loop_end_position");
-            engine.setValue(group, "loop_end_position", value);
+          if (DJCi500.loopOutAdjust[deckIndex]) {
+            value = value * DJCi500.loopAdjustMultiply + engine.getValue(this.group, "loop_end_position");
+            engine.setValue(this.group, "loop_end_position", value);
             return;
           }
         }
@@ -673,20 +676,20 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
         if (engine.isScratching(deck)) {
           engine.scratchTick(deck, value);
         } else {
-          engine.setValue(`[Channel${deck}]`, "jog", value);
+          engine.setValue(this.group, "jog", value);
         }
       }
     },
 
     inputTouch: function (channel, control, value, status, group) {
-      if (DJCi500.loopInAdjust[midiChannel - 1] || DJCi500.loopOutAdjust[midiChannel - 1]) {
+      const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
+      if (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex]) {
         return;
       }
-      const deck = script.deckFromGroup(deckData.currentDeck);
-      if (value === BUTTON_CODES.On && deckData.vinylButtonState[deck - 1]) {
-        engine.scratchEnable(deck, this.wheelResolution, this.rpm, this.alpha, this.beta);
+      if (value === BUTTON_CODES.On && deckData.vinylButtonState[deckIndex]) {
+        engine.scratchEnable(deckIndex + 1, this.wheelResolution, this.rpm, this.alpha, this.beta);
       } else {
-        engine.scratchDisable(deck);
+        engine.scratchDisable(deckIndex + 1);
       }
     },
   });
@@ -730,13 +733,13 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     outKey: "loop_enabled", // TODO: Check with loop_in?
     unshift: function () {
       this.input = function (channel, control, value, status, group) {
-        const deck = script.deckFromGroup(deckData.currentDeck);
-        if (value === BUTTON_CODES.On && (DJCi500.loopInAdjust[deck - 1] || DJCi500.loopOutAdjust[deck - 1])) {
+        const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
+        if (value === BUTTON_CODES.On && (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex])) {
           return;
         }
-        if (value === BUTTON_CODES.Off && (DJCi500.loopInAdjust[deck - 1] || DJCi500.loopOutAdjust[deck - 1])) {
-          DJCi500.loopInAdjust[deck - 1] = false;
-          DJCi500.loopOutAdjust[deck - 1] = false;
+        if (value === BUTTON_CODES.Off && (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex])) {
+          DJCi500.loopInAdjust[deckIndex] = false;
+          DJCi500.loopOutAdjust[deckIndex] = false;
           return;
         }
         engine.setValue(group, "loop_in", value === BUTTON_CODES.On ? 1 : 0);
@@ -747,9 +750,9 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
         if (value === BUTTON_CODES.Off || engine.getValue(group, "loop_enabled") === 0) {
           return;
         }
-        const deck = script.deckFromGroup(deckData.currentDeck);
-        DJCi500.loopInAdjust[deck - 1] = !DJCi500.loopInAdjust[deck - 1];
-        DJCi500.loopOutAdjust[deck - 1] = false;
+        const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
+        DJCi500.loopInAdjust[deckIndex] = !DJCi500.loopInAdjust[deckIndex];
+        DJCi500.loopOutAdjust[deckIndex] = false;
       };
     },
   });
@@ -763,13 +766,13 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     outKey: "loop_enabled", // TODO: Check with loop_in?
     unshift: function () {
       this.input = function (channel, control, value, status, group) {
-        const deck = script.deckFromGroup(deckData.currentDeck);
-        if (value === BUTTON_CODES.On && (DJCi500.loopInAdjust[deck - 1] || DJCi500.loopOutAdjust[deck - 1])) {
+        const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
+        if (value === BUTTON_CODES.On && (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex])) {
           return;
         }
-        if (value === BUTTON_CODES.Off && (DJCi500.loopInAdjust[deck - 1] || DJCi500.loopOutAdjust[deck - 1])) {
-          DJCi500.loopInAdjust[deck - 1] = false;
-          DJCi500.loopOutAdjust[deck - 1] = false;
+        if (value === BUTTON_CODES.Off && (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex])) {
+          DJCi500.loopInAdjust[deckIndex] = false;
+          DJCi500.loopOutAdjust[deckIndex] = false;
           return;
         }
         engine.setValue(group, "loop_out", value === BUTTON_CODES.On ? 1 : 0);
@@ -782,9 +785,9 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
         if (value === BUTTON_CODES.Off || engine.getValue(group, "loop_enabled") === 0) {
           return;
         }
-        const deck = script.deckFromGroup(deckData.currentDeck);
-        DJCi500.loopOutAdjust[deck - 1] = !DJCi500.loopOutAdjust[deck - 1];
-        DJCi500.loopInAdjust[deck - 1] = false;
+        const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
+        DJCi500.loopOutAdjust[deckIndex] = !DJCi500.loopOutAdjust[deckIndex];
+        DJCi500.loopInAdjust[deckIndex] = false;
       };
     },
   });
@@ -802,14 +805,14 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     unshift: function () {
       this.input = function (channel, control, value, status, group) {
         if (value === BUTTON_CODES.On) {
-          if (!engine.getValue(group, "loop_enabled")) {
-            const bootloop_size = engine.getValue(group, "beatloop_size");
-            engine.setValue(group, `beatloop_${bootloop_size}_toggle`, 1);
+          if (!engine.getValue(deckData.currentDeck, "loop_enabled")) {
+            const bootloop_size = engine.getValue(deckData.currentDeck, "beatloop_size");
+            engine.setValue(deckData.currentDeck, `beatloop_${bootloop_size}_toggle`, 1);
           } else {
-            engine.setValue(group, `loop_remove`, 1); //Trying to toggle off the auto loop does't work if it's been adjusted!
-            const deck = script.deckFromGroup(deckData.currentDeck);
-            DJCi500.loopInAdjust[deck - 1] = false;
-            DJCi500.loopOutAdjust[deck - 1] = false;
+            engine.setValue(deckData.currentDeck, `loop_remove`, 1); //Trying to toggle off the auto loop does't work if it's been adjusted!
+            const deckIndex = script.deckFromGroup(deckData.currentDeck);
+            DJCi500.loopInAdjust[deckIndex] = false;
+            DJCi500.loopOutAdjust[deckIndex] = false;
           }
         }
       };
@@ -818,10 +821,10 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
       // Could this be used for re-looping?
       this.input = function (channel, control, value, status, group) {
         if (value === BUTTON_CODES.On) {
-          engine.setValue(group, `loop_remove`, 1);
-          const deck = script.deckFromGroup(deckData.currentDeck);
-          DJCi500.loopInAdjust[deck - 1] = false;
-          DJCi500.loopOutAdjust[deck - 1] = false;
+          engine.setValue(deckData.currentDeck, `loop_remove`, 1);
+          const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
+          DJCi500.loopInAdjust[deckIndex] = false;
+          DJCi500.loopOutAdjust[deckIndex] = false;
         }
       };
     },
@@ -1341,9 +1344,9 @@ DJCi500.init = function (id, debugging) {
     // PAD 8 Beatjump LEDs
     for (var j = 1; j <= 8; j++) {
       // Normal
-      midi.sendShortMsg(getMidiChannelOffset(MIDI_BASE_CODES.Pads, i), getPadCode(8, j), pairColorsOn[j]);
+      midi.sendShortMsg(getMidiChannelOffset(MIDI_BASE_CODES.Pads, i), getPadCode(8, j), pairColorsOn[j - 1]);
       // And Shifted
-      midi.sendShortMsg(getMidiChannelOffset(MIDI_BASE_CODES.Pads, i), getPadCode(8, j, true), pairColorsOn[j]);
+      midi.sendShortMsg(getMidiChannelOffset(MIDI_BASE_CODES.Pads, i), getPadCode(8, j, true), pairColorsOn[j - 1]);
     }
 
     // Light up FX quick effect chain selector buttons
@@ -1619,6 +1622,7 @@ DJCi500.tempoLEDs = function () {
 
 // After a channel change, make sure we read the current status
 DJCi500.updateDeckStatus = function (group) {
+  this.currentDeck = group;
   const playing = engine.getValue(group, "play_indicator");
   const volume = script.absoluteLinInverse(engine.getValue(group, "vu_meter"), 0.0, 1.0, 0, 127);
 
@@ -1640,6 +1644,10 @@ DJCi500.updateDeckStatus = function (group) {
   DJCi500.fxSelIndicator(0, "[EffectRack1_EffectUnit2]", 0, 0);
 
   DJCi500.fxEnabledIndicator(0, "[QuickEffectRack1_" + group + "]", 0, 0);
+
+  // Turn off Any Loop Adjusts
+  DJCi500.loopInAdjust = [false, false, false, false];
+  DJCi500.loopOutAdjust = [false, false, false, false];
 
   // Slicer
   switch (group) {
