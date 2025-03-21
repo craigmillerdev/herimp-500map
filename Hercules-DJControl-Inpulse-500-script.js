@@ -1229,6 +1229,13 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
         DJCi500.effectRackUpdate(midiChannel, deckData.currentDeck, effectValue);
       } else {
         // Move the filter knob
+        // Only if the value is close to the currently set value
+        // to avoid big jumps
+        const currentValue = engine.getValue(`[QuickEffectRack1_${deckData.currentDeck}]`, "super1");
+        if (Math.abs(currentValue - normalizedValue) > 0.1) {
+          return;
+        }
+        // Set the value
         engine.setValue(`[QuickEffectRack1_${deckData.currentDeck}]`, "super1", normalizedValue);
       }
     },
@@ -1755,6 +1762,10 @@ DJCi500.effectRackEnabled = function (midiChannel, _channel) {
 DJCi500.effectRackUpdate = function (midiChannel, _channel, value) {
   for (let i = 1; i <= 3; i++) {
     if (engine.getValue(`[EffectRack1_EffectUnit${midiChannel}_Effect${i}]`, "enabled")) {
+      const currentValue = engine.getValue(`[EffectRack1_EffectUnit${midiChannel}_Effect${i}]`, "meta");
+      if (Math.abs(currentValue - value) > 0.1) {
+        return;
+      }
       engine.setValue(`[EffectRack1_EffectUnit${midiChannel}_Effect${i}]`, "meta", value);
     }
   }
