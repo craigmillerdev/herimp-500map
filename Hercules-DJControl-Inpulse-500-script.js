@@ -1574,7 +1574,7 @@ DJCi500.init = function (id, debugging) {
 
   // FX buttons, light them to signal the current deck 1 and 2 as active
   midi.sendShortMsg(MIDI_BASE_CODES.MixerButtons, BUTTON_CODES.FX1, ONOFF_CODES.On);
-  midi.sendShortMsg(MIDI_BASE_CODES.MixerButtons, BUTTON_CODES.FX2, ONOFF_CODES.Off);
+  midi.sendShortMsg(MIDI_BASE_CODES.MixerButtons, BUTTON_CODES.FX2, ONOFF_CODES.On);
 
   // Create the deck objects
   DJCi500.deckA = new DJCi500.Deck([1, 3], 1);
