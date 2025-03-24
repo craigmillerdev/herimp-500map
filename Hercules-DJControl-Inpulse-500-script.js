@@ -465,12 +465,9 @@ DJCi500.FlashLED = {
       isOn: false,
       originalStateBeforeFlash: false,
     };
-    console.log("Flash LED created", JSON.stringify(this.leds));
   },
   setLEDState: function (midiChannel, midiNote, isOn) {
-    console.log("Set LED state", midiChannel, midiNote, isOn);
     const led = this._getLED(midiChannel, midiNote);
-    console.log(led);
     if (!led) return false;
     // Stop any flashing first
     if (led.flashTimer !== 0) {
@@ -481,10 +478,10 @@ DJCi500.FlashLED = {
     return true;
   },
   flashOn: function (midiChannel, midiNote, num_ms_on, num_ms_off) {
-    console.log("Flash on", midiChannel, midiNote, num_ms_on, num_ms_off);
     const led = this._getLED(midiChannel, midiNote);
     if (num_ms_on < 20 || num_ms_off < 20) {
-      console.log("Flash on: too short. 20ms min", num_ms_on, num_ms_off);
+      // Ignore if the duration is too short
+      console.error("Flash duration too short", num_ms_on, num_ms_off);
       return;
     }
     if (!led) return false;
@@ -495,7 +492,6 @@ DJCi500.FlashLED = {
     this._flashOnceOn(midiChannel, midiNote);
 
     led.flashTimer = engine.beginTimer(num_ms_on + num_ms_off, () => {
-      console.log("Flash on timer triggered", midiChannel, midiNote);
       this._flashOnceOn(midiChannel, midiNote);
     });
 
@@ -559,7 +555,6 @@ DJCi500.FlashLED = {
     midi.sendShortMsg(led.midiChannel, led.midiNote, led.offValue);
   },
   _getLED: function (midiChannel, midiNote) {
-    console.log("LEDS", JSON.stringify(this.leds));
     if (this.leds[midiChannel] && this.leds[midiChannel][midiNote]) {
       return this.leds[midiChannel][midiNote];
     }
@@ -878,7 +873,7 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     shiftControl: false,
     shiftChannel: true,
     sendShifted: true,
-    outKey: "loop_enabled", // TODO: Check with loop_in?
+    outKey: "loop_enabled",
     output: function (value, group, control) {
       DJCi500.FlashLED.setLEDState(
         getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel),
@@ -974,6 +969,15 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
       this.input = function (_channel, _control, value, _status, _group) {
         if (value === ONOFF_CODES.Press) {
           if (!engine.getValue(deckData.currentDeck, "loop_enabled")) {
+            const absPosition =
+              engine.getValue(deckData.currentDeck, "playposition") * engine.getValue(deckData.currentDeck, "duration");
+            const samplerate = engine.getValue(deckData.currentDeck, "track_samplerate");
+            const loop_start_position = engine.getValue(deckData.currentDeck, "loop_start_position") / samplerate / 2;
+            const loop_end_position = engine.getValue(deckData.currentDeck, "loop_end_position") / samplerate / 2;
+            if (loop_start_position < absPosition && loop_end_position > absPosition) {
+              engine.setValue(deckData.currentDeck, `reloop_toggle`, 1);
+              return;
+            }
             const bootloop_size = engine.getValue(deckData.currentDeck, "beatloop_size");
             engine.setValue(deckData.currentDeck, `beatloop_${bootloop_size}_toggle`, 1);
           } else {
