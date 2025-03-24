@@ -886,38 +886,33 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
         value
       );
     },
-    unshift: function () {
-      this.input = function (_channel, _control, value, _status, group) {
-        const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
-        if (value === ONOFF_CODES.Press && (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex])) {
-          return;
-        }
-        if (value === ONOFF_CODES.Release && (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex])) {
-          DJCi500.stopLoopAdjust(deckIndex, midiChannel);
-          return;
-        }
-        engine.setValue(group, "loop_in", value === ONOFF_CODES.Press ? 1 : 0);
-      };
-    },
-    shift: function () {
-      this.input = function (_channel, _control, value, _status, group) {
-        if (value === ONOFF_CODES.Release || engine.getValue(group, "loop_enabled") === 0) {
-          return;
-        }
-        const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
-        DJCi500.loopInAdjust[deckIndex] = !DJCi500.loopInAdjust[deckIndex];
-        DJCi500.loopOutAdjust[deckIndex] = false;
-        if (DJCi500.loopInAdjust[deckIndex]) {
-          DJCi500.FlashLED.flashOn(
-            getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel),
-            BUTTON_CODES.LoopIn,
-            200,
-            200
-          );
-        } else {
-          DJCi500.FlashLED.flashOff(getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel), BUTTON_CODES.LoopIn);
-        }
-      };
+    input: function (channel, control, value, status, group) {
+      if (value === ONOFF_CODES.Release) {
+        return;
+      }
+      if (engine.getValue(group, "loop_enabled") === 0) {
+        engine.setValue(group, "loop_in", 1);
+        DJCi500.FlashLED.setLEDState(
+          getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel),
+          BUTTON_CODES.LoopIn,
+          ONOFF_CODES.On
+        );
+        return;
+      }
+      const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
+      DJCi500.loopInAdjust[deckIndex] = !DJCi500.loopInAdjust[deckIndex];
+      DJCi500.loopOutAdjust[deckIndex] = false;
+      DJCi500.FlashLED.flashOff(getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel), BUTTON_CODES.LoopOut);
+      if (DJCi500.loopInAdjust[deckIndex]) {
+        DJCi500.FlashLED.flashOn(
+          getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel),
+          BUTTON_CODES.LoopIn,
+          200,
+          200
+        );
+        return;
+      }
+      DJCi500.stopLoopAdjust(deckIndex, midiChannel);
     },
   });
 
@@ -929,47 +924,39 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     sendShifted: true,
     outKey: "loop_enabled", // TODO: Check with loop_in?
     output: function (value, group, control) {
-      console.log("loop out button", value, group, control);
       DJCi500.FlashLED.setLEDState(
         getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel),
         BUTTON_CODES.LoopOut,
         value
       );
     },
-    unshift: function () {
-      this.input = function (_channel, _control, value, _status, group) {
-        const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
-        if (value === ONOFF_CODES.Press && (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex])) {
-          return;
-        }
-        if (value === ONOFF_CODES.Release && (DJCi500.loopInAdjust[deckIndex] || DJCi500.loopOutAdjust[deckIndex])) {
-          DJCi500.stopLoopAdjust(deckIndex, midiChannel);
-          return;
-        }
-        engine.setValue(group, "loop_out", value === ONOFF_CODES.Press ? 1 : 0);
-      };
-    },
-    shift: function () {
-      this.inKey = null;
-      this.storedInput = this.input;
-      this.input = function (channel, control, value, status, group) {
-        if (value === ONOFF_CODES.Release || engine.getValue(group, "loop_enabled") === 0) {
-          return;
-        }
-        const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
-        DJCi500.loopOutAdjust[deckIndex] = !DJCi500.loopOutAdjust[deckIndex];
-        DJCi500.loopInAdjust[deckIndex] = false;
-        if (DJCi500.loopOutAdjust[deckIndex]) {
-          DJCi500.FlashLED.flashOn(
-            getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel),
-            BUTTON_CODES.LoopOut,
-            200,
-            200
-          );
-        } else {
-          DJCi500.FlashLED.flashOff(getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel), BUTTON_CODES.LoopOut);
-        }
-      };
+    input: function (channel, control, value, status, group) {
+      if (value === ONOFF_CODES.Release) {
+        return;
+      }
+      if (engine.getValue(group, "loop_enabled") === 0) {
+        engine.setValue(group, "loop_out", 1);
+        DJCi500.FlashLED.setLEDState(
+          getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel),
+          BUTTON_CODES.LoopOut,
+          ONOFF_CODES.On
+        );
+        return;
+      }
+      const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
+      DJCi500.loopOutAdjust[deckIndex] = !DJCi500.loopOutAdjust[deckIndex];
+      DJCi500.loopInAdjust[deckIndex] = false;
+      DJCi500.FlashLED.flashOff(getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel), BUTTON_CODES.LoopIn);
+      if (DJCi500.loopOutAdjust[deckIndex]) {
+        DJCi500.FlashLED.flashOn(
+          getMidiChannelOffset(MIDI_BASE_CODES.Buttons, midiChannel),
+          BUTTON_CODES.LoopOut,
+          200,
+          200
+        );
+        return;
+      }
+      DJCi500.stopLoopAdjust(deckIndex, midiChannel);
     },
   });
 
@@ -984,13 +971,13 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
     shiftChannel: true,
     sendShifted: true,
     unshift: function () {
-      this.input = function (channel, control, value, status, group) {
+      this.input = function (_channel, _control, value, _status, _group) {
         if (value === ONOFF_CODES.Press) {
           if (!engine.getValue(deckData.currentDeck, "loop_enabled")) {
             const bootloop_size = engine.getValue(deckData.currentDeck, "beatloop_size");
             engine.setValue(deckData.currentDeck, `beatloop_${bootloop_size}_toggle`, 1);
           } else {
-            engine.setValue(deckData.currentDeck, `loop_remove`, 1);
+            engine.setValue(deckData.currentDeck, `reloop_toggle`, 1);
             const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
             DJCi500.stopLoopAdjust(deckIndex, midiChannel);
           }
@@ -998,8 +985,7 @@ DJCi500.Deck = function (deckNumbers, midiChannel) {
       };
     },
     shift: function () {
-      // Could this be used for re-looping?
-      this.input = function (channel, control, value, status, group) {
+      this.input = function (_channel, _control, value, _status, _group) {
         if (value === ONOFF_CODES.Press) {
           engine.setValue(deckData.currentDeck, `loop_remove`, 1);
           const deckIndex = script.deckFromGroup(deckData.currentDeck) - 1;
@@ -2001,7 +1987,7 @@ DJCi500.slicerButtonFunc = function (channel, control, value, status, group) {
               function () {
                 engine.setValue(group, "reloop_toggle", 1);
               },
-              1
+              true
             );
           } else {
             engine.setValue(group, "slip_enabled", 0);
