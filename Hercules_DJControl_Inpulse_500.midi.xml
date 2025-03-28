@@ -2918,7 +2918,7 @@
             <!-- LOW EQ Knob -->
 			<control>
 				<group>[EqualizerRack1_[Channel1]_Effect1]</group>
-				<key>DJCi500.deckA.eqKnob[1].inputMSB</key>
+				<key>DJCi500.deckA.eqKnob[0].inputMSB</key>
 				<description>EQ LOW Deck A</description>
 				<status>0xB1</status>
 				<midino>0x02</midino>
@@ -2928,7 +2928,7 @@
 			</control>
 			<control>
 				<group>[EqualizerRack1_[Channel1]_Effect1]</group>
-				<key>DJCi500.deckA.eqKnob[1].inputLSB</key>
+				<key>DJCi500.deckA.eqKnob[0].inputLSB</key>
 				<description>EQ LOW Deck A</description>
 				<status>0xB1</status>
 				<midino>0x22</midino>
@@ -2939,7 +2939,7 @@
             <!-- MID EQ Knob -->
 			<control>
 				<group>[EqualizerRack1_[Channel1]_Effect1]</group>
-				<key>DJCi500.deckA.eqKnob[2].inputMSB</key>
+				<key>DJCi500.deckA.eqKnob[1].inputMSB</key>
 				<description>EQ MID Deck A</description>
 				<status>0xB1</status>
 				<midino>0x03</midino>
@@ -2949,7 +2949,7 @@
 			</control>
 			<control>
 				<group>[EqualizerRack1_[Channel1]_Effect1]</group>
-				<key>DJCi500.deckA.eqKnob[2].inputLSB</key>
+				<key>DJCi500.deckA.eqKnob[1].inputLSB</key>
 				<description>EQ MID Deck A</description>
 				<status>0xB1</status>
 				<midino>0x23</midino>
@@ -2960,7 +2960,7 @@
             <!-- HI EQ Knob -->
 			<control>
 				<group>[EqualizerRack1_[Channel1]_Effect1]</group>
-				<key>DJCi500.deckA.eqKnob[3].inputMSB</key>
+				<key>DJCi500.deckA.eqKnob[2].inputMSB</key>
 				<description>EQ HIGH Deck A</description>
 				<status>0xB1</status>
 				<midino>0x04</midino>
@@ -2970,7 +2970,7 @@
 			</control>
 			<control>
 				<group>[EqualizerRack1_[Channel1]_Effect1]</group>
-				<key>DJCi500.deckA.eqKnob[3].inputLSB</key>
+				<key>DJCi500.deckA.eqKnob[2].inputLSB</key>
 				<description>EQ HIGH Deck A</description>
 				<status>0xB1</status>
 				<midino>0x24</midino>
@@ -3138,7 +3138,7 @@
             <!-- LOW EQ Knob -->
 			<control>
 				<group>[EqualizerRack1_[Channel2]_Effect1]</group>
-				<key>DJCi500.deckB.eqKnob[1].inputMSB</key>
+				<key>DJCi500.deckB.eqKnob[0].inputMSB</key>
 				<description>EQ LOW Deck B</description>
 				<status>0xB2</status>
 				<midino>0x02</midino>
@@ -3148,7 +3148,7 @@
 			</control>
 			<control>
 				<group>[EqualizerRack1_[Channel2]_Effect1]</group>
-				<key>DJCi500.deckB.eqKnob[1].inputLSB</key>
+				<key>DJCi500.deckB.eqKnob[0].inputLSB</key>
 				<description>EQ LOW Deck B</description>
 				<status>0xB2</status>
 				<midino>0x22</midino>
@@ -3159,7 +3159,7 @@
             <!-- MID EQ Knob -->
 			<control>
 				<group>[EqualizerRack1_[Channel2]_Effect1]</group>
-				<key>DJCi500.deckB.eqKnob[2].inputMSB</key>
+				<key>DJCi500.deckB.eqKnob[1].inputMSB</key>
 				<description>EQ MID Deck B</description>
 				<status>0xB2</status>
 				<midino>0x03</midino>
@@ -3169,7 +3169,7 @@
 			</control>
 			<control>
 				<group>[EqualizerRack1_[Channel2]_Effect1]</group>
-				<key>DJCi500.deckB.eqKnob[2].inputLSB</key>
+				<key>DJCi500.deckB.eqKnob[1].inputLSB</key>
 				<description>EQ MID Deck B</description>
 				<status>0xB2</status>
 				<midino>0x23</midino>
@@ -3180,7 +3180,7 @@
             <!-- HI EQ Knob -->
 			<control>
 				<group>[EqualizerRack1_[Channel2]_Effect1]</group>
-				<key>DJCi500.deckB.eqKnob[3].inputMSB</key>
+				<key>DJCi500.deckB.eqKnob[2].inputMSB</key>
 				<description>EQ HIGH Deck B</description>
 				<status>0xB2</status>
 				<midino>0x04</midino>
@@ -3190,7 +3190,7 @@
 			</control>
 			<control>
 				<group>[EqualizerRack1_[Channel2]_Effect1]</group>
-				<key>DJCi500.deckB.eqKnob[3].inputLSB</key>
+				<key>DJCi500.deckB.eqKnob[2].inputLSB</key>
 				<description>EQ HIGH Deck B</description>
 				<status>0xB2</status>
 				<midino>0x24</midino>
