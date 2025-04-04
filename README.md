@@ -1,15 +1,13 @@
-# herimp-500map
+# Mixxx: Hercules Impulse 500 Controller mappings
 
-Mixxx: Hercules Impulse 500 mappings
-
-FORKED FROM resetreboot/herimp-500map. Significant consmectic changes to code, some bugfixes, some changes to features for personal preference.
+FORKED FROM resetreboot/herimp-500map. Significant cosmetic changes to code, some bugfixes, some changes to features for personal preference.
 
 > [!WARNING]
 > Use at your own risk.
 
 ## Overview
 
-This repository contains custom mappings for the Hercules Impulse 500 (DJControl Impulse 500) controller for Mixxx, the free and open-source DJ software.
+This repository contains custom mappings for the Hercules Impulse 500 controller for Mixxx, the free and open-source DJ software.
 
 ## Features Implemented
 
